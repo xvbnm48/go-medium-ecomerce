@@ -54,5 +54,12 @@ func (h *userHandler) SignInUser(ctx *gin.Context) {
 	if isTrue := comparePassword(dbUser.Password, user.Password); isTrue {
 		fmt.Println("user before", dbUser.ID)
 		token := GenerateToken(dbUser.ID)
+		ctx.JSON(http.StatusOK, gin.H{
+			"msg": "Success sign in ", "token": token})
+		return
 	}
+	ctx.JSON(http.StatusInternalServerError, gin.H{
+		"msg": "Invalid email or password",
+	})
+	return
 }
