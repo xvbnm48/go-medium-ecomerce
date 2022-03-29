@@ -1,8 +1,8 @@
 package repository
 
 import (
+	"github.com/jinzhu/gorm"
 	"github.com/xvbnm48/go-medium-ecomerce/model"
-	"gorm.io/gorm"
 )
 
 type ProductRepository interface {
