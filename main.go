@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/joho/godotenv"
+	"github.com/xvbnm48/go-medium-ecomerce/route"
 )
 
 func loadEnv() {
@@ -17,5 +18,5 @@ func main() {
 	fmt.Println("main application starts")
 	loadEnv()
 
-	log.Fatal(route.RunAPI(":8090"))
+	log.Fatal(route.RunAPI(":8080"))
 }

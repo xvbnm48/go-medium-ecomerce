@@ -14,7 +14,7 @@ import (
 type UserHandler interface {
 	AddUser(*gin.Context)
 	GetUser(*gin.Context)
-
+	SignInUser(*gin.Context)
 	GetAllUser(*gin.Context)
 	UpdateUser(*gin.Context)
 	DeleteUser(*gin.Context)
@@ -55,6 +55,28 @@ func (h *userHandler) GetAllUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, user)
 }
 
+func (h *userHandler) SignInUser(c *gin.Context) {
+	var user model.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	dbUser, err := h.repo.GetByEmail(user.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"msg": "No Such User Found"})
+		return
+
+	}
+	if isTrue := comparePassword(dbUser.Password, user.Password); isTrue {
+		fmt.Println("user before", dbUser.ID)
+		token := GenerateToken(int(dbUser.ID))
+		c.JSON(http.StatusOK, gin.H{"msg": "Successfully SignIN", "token": token})
+		return
+	}
+	c.JSON(http.StatusInternalServerError, gin.H{"msg": "Password not matched"})
+	return
+}
+
 func (h *userHandler) GetUser(ctx *gin.Context) {
 	id := ctx.Param("id")
 	intID, err := strconv.Atoi(id)
@@ -72,39 +94,6 @@ func (h *userHandler) GetUser(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, user)
-}
-
-func (h *userHandler) SignInUser(ctx gin.Context) {
-	var user model.User
-	if err := ctx.ShouldBindJSON(&user); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
-			"code": err.Error(),
-		})
-		return
-	}
-
-	dbUser, err := h.repo.GetByEmail(user.Email)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
-			"msg": "No Such User found",
-		})
-		return
-	}
-
-	if isTrue := comparePassword(dbUser.Password, user.Password); isTrue {
-		fmt.Println("user before", dbUser.ID)
-		token := GenerateToken(int(dbUser.ID))
-		ctx.JSON(http.StatusOK, gin.H{
-			"msg":   "User Logged In",
-			"token": token,
-		})
-		return
-	}
-
-	ctx.JSON(http.StatusInternalServerError, gin.H{
-		"msg": "Invalid Password",
-	})
-	return
 }
 
 func (h *userHandler) AddUser(ctx *gin.Context) {
