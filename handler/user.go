@@ -55,7 +55,7 @@ func (h *userHandler) GetAllUser(c *gin.Context) {
 }
 
 func (h *userHandler) GetUser(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("user")
 	intID, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
