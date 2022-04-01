@@ -14,8 +14,8 @@ import (
 type UserHandler interface {
 	AddUser(*gin.Context)
 	GetUser(*gin.Context)
-	SignInUser(*gin.Context)
 	GetAllUser(*gin.Context)
+	SignInUser(*gin.Context)
 	UpdateUser(*gin.Context)
 	DeleteUser(*gin.Context)
 	GetProductOrdered(*gin.Context)
@@ -25,7 +25,6 @@ type userHandler struct {
 	repo repository.UserRepository
 }
 
-//NewUserHandler --> returns new user handler
 func NewUserHandler() UserHandler {
 	return &userHandler{
 		repo: repository.NewUserRepository(),
@@ -34,83 +33,96 @@ func NewUserHandler() UserHandler {
 
 func hashPassword(pass *string) {
 	bytePass := []byte(*pass)
-	hPass, _ := bcrypt.GenerateFromPassword(bytePass, bcrypt.DefaultCost)
-	*pass = string(hPass)
+	hPas, _ := bcrypt.GenerateFromPassword(bytePass, bcrypt.DefaultCost)
+	*pass = string(hPas)
 }
 
 func comparePassword(dbPass, pass string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(dbPass), []byte(pass)) == nil
 }
 
-func (h *userHandler) GetAllUser(ctx *gin.Context) {
-	fmt.Println(ctx.Get("userID"))
+func (h *userHandler) GetAllUser(c *gin.Context) {
+	fmt.Println(c.Get("userID"))
 	user, err := h.repo.GetAllUser()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"code": err.Error(),
 		})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, user)
 }
 
-func (h *userHandler) SignInUser(c *gin.Context) {
-	var user model.User
-	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	}
-
-	dbUser, err := h.repo.GetByEmail(user.Email)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"msg": "No Such User Found"})
-		return
-
-	}
-	if isTrue := comparePassword(dbUser.Password, user.Password); isTrue {
-		fmt.Println("user before", dbUser.ID)
-		token := GenerateToken(int(dbUser.ID))
-		c.JSON(http.StatusOK, gin.H{"msg": "Successfully SignIN", "token": token})
-		return
-	}
-	c.JSON(http.StatusInternalServerError, gin.H{"msg": "Password not matched"})
-	return
-}
-
-func (h *userHandler) GetUser(ctx *gin.Context) {
-	id := ctx.Param("id")
+func (h *userHandler) GetUser(c *gin.Context) {
+	id := c.Param("id")
 	intID, err := strconv.Atoi(id)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusBadRequest, gin.H{
 			"code": "Invalid user ID",
 		})
 		return
 	}
 	user, err := h.repo.GetUser(intID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"code": err.Error(),
 		})
 		return
 	}
-	ctx.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, user)
 }
 
-func (h *userHandler) AddUser(ctx *gin.Context) {
+func (h *userHandler) SignInUser(c *gin.Context) {
 	var user model.User
-	if err := ctx.ShouldBindJSON(&user); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	dbUser, err := h.repo.GetByEmail(user.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code": err.Error(),
+		})
+		return
+	}
+
+	if isTrue := comparePassword(dbUser.Password, user.Password); isTrue == true {
+		fmt.Println("user before", dbUser.ID)
+		token := GenerateToken(dbUser.ID)
+		c.JSON(http.StatusOK, gin.H{
+			"status": "success login",
+			"token":  token,
+		})
+		return
+	}
+	c.JSON(http.StatusBadRequest, gin.H{
+		"code": "Invalid email or password",
+	})
+	return
+}
+
+func (h *userHandler) AddUser(c *gin.Context) {
+	var user model.User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
 		return
 	}
 	hashPassword(&user.Password)
 	user, err := h.repo.AddUser(user)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code": err.Error(),
+		})
 		return
-
 	}
-	user.Password = ""
-	ctx.JSON(http.StatusOK, user)
+
+	c.JSON(http.StatusOK, user)
 
 }
 
