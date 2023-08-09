@@ -15,6 +15,7 @@ func loadEnv() {
 }
 
 func main() {
+	// for print a message when app is start
 	fmt.Println("main application starts")
 	loadEnv()
 
